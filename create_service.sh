@@ -660,34 +660,54 @@ print_success "Docker Compose criado!"
 # Criar script de inicialização
 print_info "Criando scripts auxiliares..."
 
-cat > "$SERVICE_PATH/start.sh" <<EOF
-#!/bin/bash
-# Script para iniciar o serviço $SERVICE_NAME
+# Função para criar script com tratamento de erro
+create_script() {
+    local script_name=$1
+    local script_content=$2
+    local script_path="$SERVICE_PATH/$script_name"
+    
+    # Tentar criar o script normalmente
+    if echo "$script_content" > "$script_path" 2>/dev/null; then
+        chmod +x "$script_path" 2>/dev/null
+        return 0
+    else
+        # Se falhar, tentar com sudo
+        if echo "$script_content" | sudo tee "$script_path" > /dev/null 2>&1; then
+            sudo chmod +x "$script_path" 2>/dev/null
+            return 0
+        else
+            print_warning "Falha ao criar $script_name"
+            return 1
+        fi
+    fi
+}
 
-echo "🚀 Iniciando $SERVICE_NAME..."
+# Conteúdo do start.sh
+START_SCRIPT='#!/bin/bash
+# Script para iniciar o serviço '"$SERVICE_NAME"'
+
+echo "🚀 Iniciando '"$SERVICE_NAME"'..."
 docker compose up -d
 
 echo "📊 Status dos containers:"
 docker compose ps
 
 echo "📋 Logs (últimas 20 linhas):"
-docker compose logs --tail=20
-EOF
+docker compose logs --tail=20'
 
-cat > "$SERVICE_PATH/stop.sh" <<EOF
-#!/bin/bash
-# Script para parar o serviço $SERVICE_NAME
+# Conteúdo do stop.sh
+STOP_SCRIPT='#!/bin/bash
+# Script para parar o serviço '"$SERVICE_NAME"'
 
-echo "🛑 Parando $SERVICE_NAME..."
+echo "🛑 Parando '"$SERVICE_NAME"'..."
 docker compose down
 
 echo "🧹 Removendo containers órfãos..."
-docker compose down --remove-orphans
-EOF
+docker compose down --remove-orphans'
 
-cat > "$SERVICE_PATH/update.sh" <<EOF
-#!/bin/bash
-# Script para atualizar o serviço $SERVICE_NAME
+# Conteúdo do update.sh
+UPDATE_SCRIPT='#!/bin/bash
+# Script para atualizar o serviço '"$SERVICE_NAME"'
 
 echo "📥 Atualizando imagens..."
 docker compose pull
@@ -696,13 +716,31 @@ echo "🔄 Reiniciando serviço..."
 docker compose down
 docker compose up -d
 
-echo "✅ Atualização concluída!"
-EOF
+echo "✅ Atualização concluída!"'
 
-# Tornar scripts executáveis
-chmod +x "$SERVICE_PATH"/{start,stop,update}.sh
+# Criar os scripts
+scripts_created=0
+if create_script "start.sh" "$START_SCRIPT"; then
+    ((scripts_created++))
+fi
 
-print_success "Scripts auxiliares criados!"
+if create_script "stop.sh" "$STOP_SCRIPT"; then
+    ((scripts_created++))
+fi
+
+if create_script "update.sh" "$UPDATE_SCRIPT"; then
+    ((scripts_created++))
+fi
+
+# Verificar quantos scripts foram criados
+if [ $scripts_created -eq 3 ]; then
+    print_success "Scripts auxiliares criados com sucesso!"
+elif [ $scripts_created -gt 0 ]; then
+    print_warning "$scripts_created de 3 scripts criados com sucesso"
+else
+    print_error "Não foi possível criar nenhum script auxiliar"
+    print_info "Verifique as permissões do diretório $SERVICE_PATH"
+fi
 
 # === FINALIZAÇÃO ===
 
