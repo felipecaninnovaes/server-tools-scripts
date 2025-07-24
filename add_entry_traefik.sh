@@ -52,6 +52,7 @@ print_warning() {
 }
 
 # === CONFIGURAÇÕES ===
+# === CONFIGURAÇÕES ===
 TRAEFIK_CONFIG_DIR="/srv/docker/traefik/dynamic"
 TRAEFIK_SERVICE="traefik"
 CERT_RESOLVER="cloudflare"
@@ -373,6 +374,7 @@ list_adguard_rewrites() {
 }
 
 # === PROCESSAMENTO DE ARGUMENTOS ===
+# === PROCESSAMENTO DE ARGUMENTOS ===
 
 # Processar opções
 case "$1" in
@@ -505,6 +507,7 @@ if [ -f "$TRAEFIK_FILE" ]; then
     create_backup
 fi
 
+# === CRIAÇÃO DA CONFIGURAÇÃO ===
 # === CRIAÇÃO DA CONFIGURAÇÃO ===
 
 print_info "Criando configuração do Traefik..."
